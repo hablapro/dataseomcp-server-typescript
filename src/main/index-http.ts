@@ -191,6 +191,16 @@ async function main() {
     });
   };
 
+  // Health check endpoint
+  app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'healthy',
+      server: name,
+      version: version,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Apply basic auth and shared handler to both endpoints
   app.post('/http', basicAuth, handleMcpRequest);
   app.post('/mcp', basicAuth, handleMcpRequest);
