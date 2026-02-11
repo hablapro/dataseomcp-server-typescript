@@ -85,7 +85,7 @@ function createErrorResponse(code: number, message: string): Response {
 /**
  * Creates an HTML landing page for the MCP server
  */
-function createLandingPage(): Response {
+function createLandingPage(baseUrl: string): Response {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -249,7 +249,7 @@ function createLandingPage(): Response {
       </div>
       <div class="endpoint">
         <span class="endpoint-label">MCP</span>
-        <strong>POST</strong> /mcp
+        <strong>POST</strong> ${baseUrl}/mcp
       </div>
     </div>
 
@@ -259,7 +259,7 @@ function createLandingPage(): Response {
       </div>
       <div class="endpoint">
         <span class="endpoint-label">MCP</span>
-        <strong>POST</strong> /http
+        <strong>POST</strong> ${baseUrl}/http
       </div>
     </div>
 
@@ -269,7 +269,7 @@ function createLandingPage(): Response {
       </div>
       <div class="endpoint">
         <span class="endpoint-label">MCP</span>
-        <strong>GET/POST</strong> /sse
+        <strong>GET/POST</strong> ${baseUrl}/sse
       </div>
     </div>
 
@@ -279,7 +279,7 @@ function createLandingPage(): Response {
       </div>
       <div class="endpoint">
         <span class="endpoint-label">INFO</span>
-        <strong>GET</strong> /health
+        <strong>GET</strong> ${baseUrl}/health
       </div>
     </div>
 
@@ -320,7 +320,8 @@ export default {
 
     // Landing page
     if ((url.pathname === '/' || url.pathname === '') && request.method === 'GET') {
-      return createLandingPage();
+      const baseUrl = url.origin;
+      return createLandingPage(baseUrl);
     }
 
     // Health check endpoint
