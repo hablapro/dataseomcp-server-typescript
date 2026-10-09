@@ -8,3 +8,5 @@ src/main/test2.ts
 .vscode/launch.json
 .vscode/tasks.json
 .idea/*
+# local Worker secrets
+.dev.vars
