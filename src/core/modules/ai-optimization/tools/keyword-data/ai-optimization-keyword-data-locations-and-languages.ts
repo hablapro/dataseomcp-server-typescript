@@ -13,11 +13,15 @@ export class AiOptimizationKeywordDataLocationsAndLanguagesListTool extends Base
   }
   
   getName(): string {
-      return "ai_optimization_keyword_data_locations_and_languages";
+      return "ai_opt_kw_data_loc_and_lang";
   }
 
   getDescription(): string {
-      return "Utility tool for ai_keyword_data_search_volume to get list of availible locations and languages";
+      return "Utility tool for 'AI Optimization Keyword Data Locations and Languages' (ai_opt_kw_data_loc_and_lang) to get list of availible locations and languages";
+  }
+
+  getTitle(): string {
+    return 'AI Optimization Keywords Data Locations and Languages';
   }
 
   getParams(): ZodRawShape {
@@ -28,7 +32,7 @@ export class AiOptimizationKeywordDataLocationsAndLanguagesListTool extends Base
      try {
 
       const response = await this.dataForSEOClient.makeRequest(`/v3/ai_optimization/ai_keyword_data/locations_and_languages`, 'GET', null);
-      return this.validateAndFormatResponse(response);
+      return this.formatResponse(response);
     } catch (error) {
       return this.formatErrorResponse(error);
     }

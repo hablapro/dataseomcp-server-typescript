@@ -8,21 +8,27 @@ export class GoogleAdsSearchVolumeTool extends BaseTool {
   }
 
   getName(): string {
-    return 'keywords_data_google_ads_search_volume';
+    return 'kw_data_google_ads_search_volume';
   }
 
   getDescription(): string {
     return 'Get search volume data for keywords from Google Ads';
   }
 
+  getTitle(): string {
+    return 'Keywords Data Google Ads Search Volume';
+  }
+
   getParams(): z.ZodRawShape {
     return {
-      location_name: z.string().nullable().default(null).describe(`full name of the location
-optional field
-in format "Country"
-example:
-United Kingdom`),
-              language_code: z.string().nullable().default(null).describe(`Language two-letter ISO code (e.g., 'en').
+      location_name: z.string().default('United States').describe(`full name of the location
+required field
+Location format - hierarchical, comma-separated (from most specific to least)
+ Can be one of:
+ 1. Country only: "United States"
+ 2. Region,Country: "California,United States"
+ 3. City,Region,Country: "San Francisco,California,United States"`),
+      language_code: z.string().nullable().default(null).describe(`Language two-letter ISO code (e.g., 'en').
 optional field`),
       keywords: z.array(z.string()).describe("Array of keywords to get search volume for"),
     };

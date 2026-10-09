@@ -4,6 +4,7 @@ Model Context Protocol (MCP) server implementation for DataForSEO, enabling AI a
 
 ## Features
 
+- **AI_OPTIMIZATION API**: provides data for keyword discovery, conversational optimization, and real-time LLM benchmarking; 
 - **SERP API**: real-time Search Engine Results Page (SERP) data for Google, Bing, and Yahoo;
 - **KEYWORDS_DATA API**: keyword research and clickstream data, including search volume, cost-per-click, and other metrics;   
 - **ONPAGE API**: allows crawling websites and webpages according to customizable parameters to obtain on-page SEO performance metrics; 
@@ -12,6 +13,7 @@ Model Context Protocol (MCP) server implementation for DataForSEO, enabling AI a
 - **BUSINESS DATA API**: publicly available data on any business entity;
 - **DOMAIN ANALYTICS API**: data on website traffic, technologies, and Whois details;
 - **CONTENT ANALYSIS API**: robust source of data for brand monitoring, sentiment analysis, and citation management;
+- **MERCHANT API**: provides essential data and metrics for comprehensive competitor analysis, price monitoring, and market research across Google Shopping, Amazon etc.
 
 ## Prerequisites
 
@@ -41,10 +43,19 @@ export DATAFORSEO_PASSWORD=your_password
 # If not set, all modules will be enabled
 export ENABLED_MODULES="SERP,KEYWORDS_DATA,ONPAGE,DATAFORSEO_LABS,BACKLINKS,BUSINESS_DATA,DOMAIN_ANALYTICS"
 
+# Optional: specify which prompts in enabled modules are enable too (prompts names, comma-separated)
+# If not set, all prompts from enabled modules will be enabled
+export ENABLED_PROMPTS="top_3_google_result_domains,top_5_serp_paid_and_organic"
+
 # Optional: enable full API responses
 # If not set or set to false, the server will filter and transform API responses to a more concise format
 # If set to true, the server will return the full, unmodified API responses
 export DATAFORSEO_FULL_RESPONSE="false"
+
+# Optional: enable simple filter schema
+# If set to true, a simplified version of the filters schema will be used.
+# This is required for ChatGPT APIs or other LLMs that cannot handle nested structures.
+export DATAFORSEO_SIMPLE_FILTER="false"
 ```
 
 ## Installation as an NPM Package
@@ -52,13 +63,13 @@ export DATAFORSEO_FULL_RESPONSE="false"
 You can install the package globally:
 
 ```bash
-npm install -g dataforseo-mcp-server
+npm install -g dataforseo-mcp-server@latest
 ```
 
 Or run it directly without installation:
 
 ```bash
-npx dataforseo-mcp-server
+npx dataforseo-mcp-server@latest
 ```
 
 Remember to set environment variables before running the command:
@@ -69,7 +80,7 @@ export DATAFORSEO_USERNAME=your_username
 export DATAFORSEO_PASSWORD=your_password
 
 # Run with npx
-npx dataforseo-mcp-server
+npx dataforseo-mcp-server@latest
 ```
 
 ## Building and Running
@@ -82,10 +93,10 @@ npm run build
 Run the server:
 ```bash
 # Start local server (direct MCP communication)
-npx dataforseo-mcp-server
+npx dataforseo-mcp-server@latest
 
 # Start HTTP server
-npx dataforseo-mcp-server http
+npx dataforseo-mcp-server@latest http
 ```
 
 ## HTTP Server Configuration
@@ -111,6 +122,9 @@ npm run http
    ```bash
    export DATAFORSEO_USERNAME=your_username
    export DATAFORSEO_PASSWORD=your_password
+   # Optional
+   export DATAFORSEO_SIMPLE_FILTER="false"
+   export DATAFORSEO_FULL_RESPONSE="true"
    ```
 
 ## Cloudflare Worker Deployment
@@ -156,6 +170,7 @@ The worker uses the same environment variables as the standard server:
 - `DATAFORSEO_USERNAME`: Your DataForSEO username
 - `DATAFORSEO_PASSWORD`: Your DataForSEO password  
 - `ENABLED_MODULES`: Comma-separated list of modules to enable
+- `ENABLED_PROMPTS`: Comma-separated list of prompt names to enable 
 - `DATAFORSEO_FULL_RESPONSE`: Set to "true" for full API responses
 
 ### Worker Endpoints
@@ -179,7 +194,8 @@ Edit `wrangler.jsonc` to customize your deployment:
   "compatibility_date": "2025-07-10",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "ENABLED_MODULES": "SERP,KEYWORDS_DATA,ONPAGE,DATAFORSEO_LABS"
+    "ENABLED_MODULES": "SERP,KEYWORDS_DATA,ONPAGE,DATAFORSEO_LABS",
+    "ENABLED_PROMPTS":"top_3_google_result_domains,top_5_serp_paid_and_organic"
   }
 }
 ```
@@ -203,6 +219,7 @@ After deployment, configure Claude to use your worker:
 
 The following modules are available to be enabled/disabled:
 
+- `AI_OPTIMIZATION`: provides data for keyword discovery, conversational optimization, and real-time LLM benchmarking;
 - `SERP`: real-time SERP data for Google, Bing, and Yahoo;
 - `KEYWORDS_DATA`: keyword research and clickstream data;
 - `ONPAGE`: crawl websites and webpages to obtain on-page SEO performance metrics;
@@ -211,12 +228,14 @@ The following modules are available to be enabled/disabled:
 - `BUSINESS_DATA`: based on business reviews and business information publicly shared on the following platforms: Google, Trustpilot, Tripadvisor;
 - `DOMAIN_ANALYTICS`: helps identify all possible technologies used for building websites and offers Whois data;
 - `CONTENT_ANALYSIS`: help you discover citations of the target keyword or brand and analyze the sentiments around it;
+- `MERCHANT`: helps retrieve product data, prices, and seller information from Google Shopping and Amazon etc.;
 
 ## Adding New Tools/Modules
 
 ### Module Structure
 
 Each module corresponds to a specific DataForSEO API:
+- `AI_OPTIMIZATION`: [AI Optimization API](https://docs.dataforseo.com/v3/ai_optimization/overview)
 - `SERP` module → [SERP API](https://docs.dataforseo.com/v3/serp/overview)
 - `KEYWORDS_DATA` module → [Keywords Data API](https://docs.dataforseo.com/v3/keywords_data/overview)
 - `ONPAGE` module → [OnPage API](https://docs.dataforseo.com/v3/on_page/overview)
@@ -225,6 +244,7 @@ Each module corresponds to a specific DataForSEO API:
 - `BUSINESS_DATA`: module → [Business Data API](https://docs.dataforseo.com/v3/business_data/overview)
 - `DOMAIN_ANALYTICS`: module → [Domain Analytics API](https://docs.dataforseo.com/v3/domain_analytics/overview)
 - `CONTENT_ANALYSIS`: module → [Content Analysis API](https://docs.dataforseo.com/v3/content_analysis/overview)
+- `MERCHANT`: module -> [Metchant API](https://docs.dataforseo.com/v3/merchant/overview)
 
 ### Implementation Options
 
@@ -382,10 +402,10 @@ Pass the configuration file using the `--configuration` parameter:
 npm run cli -- http --configuration field-config.json
 
 # With npx
-npx dataforseo-mcp-server http --configuration field-config.json
+npx dataforseo-mcp-server@latest http --configuration field-config.json
 
 # Local mode
-npx dataforseo-mcp-server local --configuration field-config.json
+npx dataforseo-mcp-server@latest local --configuration field-config.json
 ```
 
 ### Configuration Behavior
@@ -478,7 +498,7 @@ cp field-config.example.json my-config.json
 
 3. Use your custom configuration:
 ```bash
-npx dataforseo-mcp-server http --configuration my-config.json
+npx dataforseo-mcp-server@latest http --configuration my-config.json
 ```
 
 ## What endpoints/APIs do you want us to support next?

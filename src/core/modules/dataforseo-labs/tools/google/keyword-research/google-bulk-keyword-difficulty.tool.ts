@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../../base.tool.js';
 
 export class GoogleBulkKeywordDifficultyTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleBulkKeywordDifficultyTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint will provide you with the Keyword Difficulty metric for a maximum of 1,000 keywords in one API request. Keyword Difficulty stands for the relative difficulty of ranking in the first top-10 organic results for the related keyword. Keyword Difficulty in DataForSEO API responses indicates the chance of getting in top-10 organic results for a keyword on a logarithmic scale from 0 to 100.`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Bulk Keyword Difficulty';
   }
 
   getParams(): z.ZodRawShape {
@@ -36,7 +40,7 @@ example:
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/bulk_keyword_difficulty/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/bulk_keyword_difficulty/live', 'POST', [{
         keywords: params.keywords,
         location_name: params.location_name,
         language_code: params.language_code

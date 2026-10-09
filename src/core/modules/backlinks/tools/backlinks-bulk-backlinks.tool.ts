@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../client/dataforseo.client.js';
 import { BaseTool } from '../../base.tool.js';
 
 export class BacklinksBulkBacklinksTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -14,6 +14,10 @@ export class BacklinksBulkBacklinksTool extends BaseTool {
   getDescription(): string {
     return `This endpoint will provide you with the number of backlinks pointing to domains, subdomains, and pages specified in the targets array. The returned numbers correspond to all live backlinks, that is, total number of referring links with all attributes (e.g., nofollow, noreferrer, ugc, sponsored etc) that were found during the latest check.
 Note that if you indicate a domain as a target, you will get results for the root domain (domain with all of its subdomains), e.g. dataforseo.com and app.dataforseo.com`;
+  }
+
+  getTitle(): string {
+    return 'Backlinks Bulk Backlinks';
   }
 
   getParams(): z.ZodRawShape {
@@ -41,7 +45,7 @@ example:
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/backlinks/bulk_backlinks/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/bulk_backlinks/live', 'POST', [{
         targets: params.targets
       }]);
       return this.validateAndFormatResponse(response);

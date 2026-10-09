@@ -23,7 +23,7 @@ export class WhoisFiltersTool extends BaseTool {
     'domain_analytics_whois_overview': 'overview'
   };
 
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -35,6 +35,10 @@ export class WhoisFiltersTool extends BaseTool {
     return `Here you will find all the necessary information about filters that can be used with DataForSEO WHOIS API endpoints.
 
 Please, keep in mind that filters are associated with a certain object in the result array, and should be specified accordingly.`;
+  }
+
+  getTitle(): string {
+    return 'Domain Analytics WHOIS Available Filters';
   }
 
   protected supportOnlyFullResponse(): boolean {
@@ -57,7 +61,7 @@ Please, keep in mind that filters are associated with a certain object in the re
     }
 
     // Fetch fresh data
-    const response = await this.client.makeRequest('/v3/domain_analytics/whois/available_filters', 'GET', null, true) as DataForSEOFullResponse;
+    const response = await this.dataForSEOClient.makeRequest('/v3/domain_analytics/whois/available_filters', 'GET', null, true) as DataForSEOFullResponse;
     this.validateResponseFull(response);
 
     // Transform the response into our cache format

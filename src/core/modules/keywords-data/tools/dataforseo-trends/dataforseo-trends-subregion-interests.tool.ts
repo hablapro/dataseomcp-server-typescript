@@ -8,11 +8,15 @@ export class DataForSeoTrendsSubregionInterestsTool extends BaseTool {
   }
 
   getName(): string {
-    return 'keywords_data_dataforseo_trends_subregion_interests';
+    return 'kw_data_dfs_trends_subregion_interests';
   }
 
   getDescription(): string {
     return `This endpoint will provide you with location-specific keyword popularity data from DataForSEO Trends`;
+  }
+
+  getTitle(): string {
+    return 'Keywords Data DataForSEO Trends Subregion Interests';
   }
 
   getParams(): z.ZodRawShape {

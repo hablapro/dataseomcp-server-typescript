@@ -1,4 +1,5 @@
-import { BaseModule, ToolDefinition } from '../base.module.js';
+import { BaseModule, buildToolsRecord, ToolDefinition } from '../base.module.js';
+import { PromptDefinition } from '../prompt-definition.js';
 import { z } from 'zod';
 import { SerpOrganicLiveAdvancedTool } from './tools/serp-organic-live-advanced.tool.js';
 import { SerpOrganicLocationsListTool } from './tools/serp-organic-locations-list.tool.js';
@@ -7,6 +8,7 @@ import { SerpYoutubeVideoInfoLiveAdvancedTool } from './tools/serp-youtube-video
 import { SerpYoutubeVideoCommentsLiveAdvancedTool } from './tools/serp-youtube-video-comments-live-advanced-tool.js';
 import { SerpYoutubeVideoSubtitlesLiveAdvancedTool } from './tools/serp-youtube-video-subtitles-live-advanced-tool.js';
 import { SerpYoutubeLocationsListTool } from './tools/serp-youtube-locations-list.tool.js';
+import { serpPrompts } from './serp.prompt.js';
 
 export class SerpApiModule extends BaseModule {
   getTools(): Record<string, ToolDefinition> {
@@ -22,12 +24,19 @@ export class SerpApiModule extends BaseModule {
       // Add more tools here
     ];
 
-    return tools.reduce((acc, tool) => ({
+    return buildToolsRecord(tools);
+  }
+
+  getPrompts(): Record<string, PromptDefinition> {
+    return serpPrompts.reduce((acc, prompt) => ({
       ...acc,
-      [tool.getName()]: {
-        description: tool.getDescription(),
-        params: tool.getParams(),
-        handler: (params: any) => tool.handle(params),
+      [prompt.name]: {
+        description: prompt.description,
+        params: prompt.params,
+        handler: (params: any) => {
+
+          return prompt.handler(params);
+        },
       },
     }), {});
   }

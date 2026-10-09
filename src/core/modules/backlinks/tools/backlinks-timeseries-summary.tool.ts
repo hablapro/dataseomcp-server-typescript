@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../client/dataforseo.client.js';
 import { BaseTool } from '../../base.tool.js';
 
 export class BacklinksTimeseriesSummaryTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -14,6 +14,10 @@ export class BacklinksTimeseriesSummaryTool extends BaseTool {
   getDescription(): string {
     return `This endpoint will provide you with an overview of backlink data for the target domain available during a period between the two indicated dates. Backlink metrics will be grouped by the time range that you define: day, week, month, or year.
 Data from this endpoint will be especially helpful for building time-series graphs of daily, weekly, monthly, and yearly link-building progress`;
+  }
+
+  getTitle(): string {
+    return 'Backlinks Timeseries Summary';
   }
 
   getParams(): z.ZodRawShape {
@@ -58,7 +62,7 @@ if there is no data for a certain day/week/month/year, we will return 0`).defaul
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/backlinks/timeseries_summary/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/timeseries_summary/live', 'POST', [{
         target: params.target,
         date_from: params.date_from,
         date_to: params.date_to,

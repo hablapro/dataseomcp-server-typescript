@@ -8,11 +8,15 @@ export class DataForSeoTrendsDemographyTool extends BaseTool {
   }
 
   getName(): string {
-    return 'keywords_data_dataforseo_trends_demography';
+    return 'kw_data_dfs_trends_demography';
   }
 
   getDescription(): string {
     return `This endpoint will provide you with the demographic breakdown (by age and gender) of keyword popularity per each specified term based on DataForSEO Trends data`;
+  }
+
+  getTitle(): string {
+    return 'Keywords Data DataForSEO Trends Demography';
   }
 
   getParams(): z.ZodRawShape {

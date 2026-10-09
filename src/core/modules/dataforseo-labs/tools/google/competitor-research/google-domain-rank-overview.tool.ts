@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../../base.tool.js';
 
 export class GoogleDomainRankOverviewTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleDomainRankOverviewTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint will provide you with ranking and traffic data from organic and paid search for the specified domain. You will be able to review the domain ranking distribution in SERPs as well as estimated monthly traffic volume for both organic and paid results.`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Domain Rank Overview';
   }
 
   getParams(): z.ZodRawShape {
@@ -35,7 +39,7 @@ example:
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/domain_rank_overview/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/domain_rank_overview/live', 'POST', [{
         target: params.target,
         location_name: params.location_name,
         language_code: params.language_code,

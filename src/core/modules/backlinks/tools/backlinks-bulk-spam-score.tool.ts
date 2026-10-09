@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../client/dataforseo.client.js';
 import { BaseTool } from '../../base.tool.js';
 
 export class BacklinksBulkSpamScoreTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class BacklinksBulkSpamScoreTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint will provide you with spam scores of the domains, subdomains, and pages you specified in the targets array. Spam Score is DataForSEO’s proprietary metric that indicates how “spammy” your target is on a scale from 0 to 100`;
+  }
+
+  getTitle(): string {
+    return 'Backlinks Bulk Spam Score';
   }
 
   getParams(): z.ZodRawShape {
@@ -40,7 +44,7 @@ example:
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/backlinks/bulk_spam_score/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/bulk_spam_score/live', 'POST', [{
         targets: params.targets
       }]);
       return this.validateAndFormatResponse(response);

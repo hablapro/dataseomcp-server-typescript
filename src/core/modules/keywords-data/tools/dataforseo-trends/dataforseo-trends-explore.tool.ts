@@ -8,11 +8,15 @@ export class DataForSeoTrendsExploreTool extends BaseTool {
   }
 
   getName(): string {
-    return 'keywords_data_dataforseo_trends_explore';
+    return 'kw_data_dfs_trends_explore';
   }
 
   getDescription(): string {
     return `This endpoint will provide you with the keyword popularity data from DataForSEO Trends. You can check keyword trends for Google Search, Google News, and Google Shopping`;
+  }
+
+  getTitle(): string {
+    return 'Keywords Data DataForSEO Trends Explore';
   }
 
   getParams(): z.ZodRawShape {

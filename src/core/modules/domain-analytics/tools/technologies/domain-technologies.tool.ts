@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../base.tool.js';
 
 export class DomainTechnologiesTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class DomainTechnologiesTool extends BaseTool {
 
   getDescription(): string {
     return `Using this endpoint you will get a list of technologies used in a particular domain`;
+  }
+
+  getTitle(): string {
+    return 'Domain Analytics Technologies Domain Technologies';
   }
 
   getParams(): z.ZodRawShape {
@@ -26,7 +30,7 @@ Note: results will be returned for the specified domain only`)
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/domain_analytics/technologies/domain_technologies/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/domain_analytics/technologies/domain_technologies/live', 'POST', [{
         target: params.target
       }]);
       return this.validateAndFormatResponse(response);

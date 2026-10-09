@@ -4,7 +4,7 @@ import { BaseTool } from '../../../../base.tool.js';
 import { mapArrayToNumberedKeys } from '../../../../../utils/map-array-to-numbered-keys.js';
 
 export class GooglePageIntersectionsTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -20,6 +20,10 @@ If you would like to get the keywords several pages rank for, you need to specif
 
 Find keywords your competitors rank for but you do not:
 If you would like to receive all keywords several pages rank for, but particular pages do not, you need to use the exclude_pages array as well. This way you will receive the keywords for which the URLs from the pages object rank for, but the URLs from the exclude_pages array do not`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Page Intersection';
   }
 
   getParams(): z.ZodRawShape {
@@ -80,16 +84,13 @@ example:
         if you specify the 10 value, the first ten keywords in the results array will be omitted and the data will be provided for the successive keywords`
       ),
       filters: this.getFilterExpression().optional().describe(
-        `you can add several filters at once (8 filters maximum)
-        you should set a logical operator and, or between the conditions
-        the following operators are supported:
-        regex, not_regex, <, <=, >, >=, =, <>, in, not_in, match, not_match, ilike, not_ilike, like, not_like
-        you can use the % operator with like and not_like, as well as ilike and not_ilike to match any string of zero or more characters
-        merge operator must be a string and connect two other arrays, availible values: or, and.
-        example:
-        ["keyword_data.keyword_info.search_volume","in",[100,1000]]
-        [["intersection_result.1.etv",">",0],"and",["intersection_result.2.description","like","%goat%"]]
-        [["keyword_data.keyword_info.search_volume",">",100],"and",[["intersection_result.1.description","like","%goat%"],"or",["intersection_result.2.type","=","organic"]]]`
+        `Array-based filter expression. A single condition is a 3-element array: [field, operator, value]. Combine conditions with ["and"|"or"] between them: [condition, "and", condition]. Max 8 filters.
+Operators: regex, not_regex, <, <=, >, >=, =, <>, in, not_in, match, not_match, ilike, not_ilike, like, not_like
+Use % with like/not_like/ilike/not_ilike as a wildcard.
+Examples:
+  Single: ["keyword_data.keyword_info.search_volume", "in", [100, 1000]]
+  Combined: [["intersection_result.1.etv", ">", 0], "and", ["intersection_result.2.description", "like", "%goat%"]]
+  Nested: [["keyword_data.keyword_info.search_volume", ">", 100], "and", [["intersection_result.1.description", "like", "%goat%"], "or", ["intersection_result.2.type", "=", "organic"]]]`
       ),
       order_by: z.array(z.string()).optional().describe(
         `results sorting rules
@@ -109,13 +110,15 @@ example:
 ["intersection_result.1.rank_group,asc","intersection_result.2.rank_absolute,asc"]`
       ),      
       include_clickstream_data: z.boolean().optional().default(false).describe(
-        `Include or exclude data from clickstream-based metrics in the result`)
-    };
+        `Include or exclude data from clickstream-based metrics in the result`),
+      item_types: z.array(z.enum(['organic', 'paid','featured_snippet','local_pack'])).optional().describe(`display results by item type
+indicates the type of search results included in the response`).default(['organic'])
+    }
   }
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/page_intersection/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/page_intersection/live', 'POST', [{
         pages: mapArrayToNumberedKeys(params.pages),
         location_name: params.location_name,
         language_code: params.language_code,
@@ -123,7 +126,7 @@ example:
         filters: this.formatFilters(params.filters),
         order_by: this.formatOrderBy(params.order_by),
         exclude_top_domains: params.exclude_top_domains,
-        item_types: ['organic'],
+        item_types: params.item_types,
         exclude_pages: params.exclude_pages,
         intersection_mode: params.intersection_mode,
         limit: params.limit,

@@ -1,7 +1,7 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from 'zod';
-import { DataForSEOClient, DataForSEOConfig } from '../core/client/dataforseo.client.js';
+import { DataForSEOClient, buildBasicAuthHeader } from '../core/client/dataforseo.client.js';
 import { EnabledModulesSchema } from '../core/config/modules.config.js';
 import { BaseModule, ToolDefinition } from '../core/modules/base.module.js';
 import { ModuleLoaderService } from '../core/utils/module-loader.js';
@@ -38,13 +38,12 @@ export class DataForSEOMcpAgent extends McpAgent {
       throw new Error(`Worker environment not available`);
     }
 
-    // Initialize DataForSEO client
-    const dataForSEOConfig: DataForSEOConfig = {
-      username: workerEnv.DATAFORSEO_USERNAME || "",
-      password: workerEnv.DATAFORSEO_PASSWORD || "",
-    };
-    
-    const dataForSEOClient = new DataForSEOClient(dataForSEOConfig);
+    const dataForSEOClient = new DataForSEOClient({
+      authHeader: buildBasicAuthHeader(
+        workerEnv.DATAFORSEO_USERNAME || "",
+        workerEnv.DATAFORSEO_PASSWORD || "",
+      ),
+    });
     
     // Parse enabled modules from environment
     const enabledModules = EnabledModulesSchema.parse(workerEnv.ENABLED_MODULES);
@@ -52,16 +51,40 @@ export class DataForSEOMcpAgent extends McpAgent {
     // Initialize and load modules
     const modules: BaseModule[] = ModuleLoaderService.loadModules(dataForSEOClient, enabledModules);
     
-    // Register tools from all modules
+    const enabledPromptsRaw = (workerEnv as unknown as Record<string, string>)['ENABLED_PROMPTS'] as string | undefined;
+    const enabledPrompts = enabledPromptsRaw ? enabledPromptsRaw.split(',').map(name => name.trim()) : [];
+
+    // Register tools and prompts from all modules
     modules.forEach(module => {
       const tools = module.getTools();
       Object.entries(tools).forEach(([name, tool]) => {
         const typedTool = tool as ToolDefinition;
         const schema = z.object(typedTool.params);
-        this.server.tool(
+        this.server.registerTool(
           name,
-          schema.shape,
-          typedTool.handler
+          {
+            title: typedTool.title,
+            description: typedTool.description,
+            inputSchema: schema.shape,
+            annotations: typedTool.annotations,
+          },
+          (args) => typedTool.handler(args)
+        );
+      });
+
+      const prompts = module.getPrompts();
+      const allowedPrompts = enabledPrompts.length === 0
+        ? prompts
+        : Object.fromEntries(Object.entries(prompts).filter(([promptName]) => enabledPrompts.includes(promptName)));
+
+      Object.entries(allowedPrompts).forEach(([name, prompt]) => {
+        this.server.registerPrompt(
+          name,
+          {
+            description: prompt.description,
+            argsSchema: prompt.params,
+          },
+          prompt.handler
         );
       });
     });

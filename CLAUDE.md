@@ -137,7 +137,7 @@ Tool names are flat strings: `<module>_<api_path_segments>`. Examples:
 
 | Tool name | Module |
 |---|---|
-| `keywords_data_google_ads_search_volume` | KEYWORDS_DATA |
+| `kw_data_google_ads_search_volume` | KEYWORDS_DATA |
 | `dataforseo_labs_google_keyword_overview` | DATAFORSEO_LABS |
 | `serp_organic_live_advanced` | SERP |
 | `backlinks_backlinks` | BACKLINKS |
@@ -185,7 +185,7 @@ curl -X POST http://localhost:3000/mcp \
     "id": 3,
     "method": "tools/call",
     "params": {
-      "name": "keywords_data_google_ads_search_volume",
+      "name": "kw_data_google_ads_search_volume",
       "arguments": {
         "keywords": ["seo tools", "keyword research"],
         "location_name": "United States",
@@ -258,6 +258,53 @@ Responses are JSON-RPC with tool output in `result.content[].text` (stringified 
   }
 }
 ```
+
+## OpenClaw Setup
+
+OpenClaw connects to MCP servers via the **mcp-hub skill** (native MCP support is not yet built in).
+
+### 1. Install the mcp-hub skill
+
+```bash
+npx playbooks add skill openclaw/skills --skill mcp-hub
+```
+
+### 2. Configure DataForSEO MCP server
+
+**Option A — Local stdio mode** (runs the server as a child process):
+
+```json
+{
+  "mcpServers": {
+    "dataforseo": {
+      "command": "npx",
+      "args": ["dataforseo-mcp-server"],
+      "env": {
+        "DATAFORSEO_USERNAME": "your_username",
+        "DATAFORSEO_PASSWORD": "your_password",
+        "ENABLED_MODULES": "SERP,KEYWORDS_DATA,DATAFORSEO_LABS,BACKLINKS"
+      }
+    }
+  }
+}
+```
+
+**Option B — Remote HTTP mode** (connect to a deployed Cloudflare Worker or HTTP server):
+
+```json
+{
+  "mcpServers": {
+    "dataforseo": {
+      "url": "https://your-worker.your-subdomain.workers.dev/mcp",
+      "transport": "streamable-http"
+    }
+  }
+}
+```
+
+For HTTP mode, set DataForSEO credentials as secrets in the Cloudflare dashboard or as env vars on the HTTP server.
+
+Once connected, OpenClaw's agent will see all DataForSEO tools (e.g. `kw_data_google_ads_search_volume`, `serp_organic_live_advanced`, `dataforseo_labs_google_keyword_overview`) and can invoke them directly.
 
 ## No Test Suite
 

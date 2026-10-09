@@ -32,12 +32,16 @@ export class BacklinksFiltersTool extends BaseTool {
     'backlinks_competitors': 'competitors'
   };
 
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
   getName(): string {
     return 'backlinks_available_filters';
+  }
+
+  getTitle(): string {
+    return 'Backlinks Available Filters';
   }
 
   getDescription(): string {
@@ -66,7 +70,7 @@ Please, keep in mind that filters are associated with a certain object in the re
     }
 
     // Fetch fresh data
-    const response = await this.client.makeRequest('/v3/backlinks/available_filters', 'GET', null, true) as DataForSEOFullResponse;
+    const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/available_filters', 'GET', null, true) as DataForSEOFullResponse;
     this.validateResponseFull(response);
 
     // Transform the response into our cache format

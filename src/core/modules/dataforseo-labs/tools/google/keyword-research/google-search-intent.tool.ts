@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../../base.tool.js';
 
 export class GoogleSearchIntentTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -14,6 +14,10 @@ export class GoogleSearchIntentTool extends BaseTool {
   getDescription(): string {
     return `This endpoint will provide you with search intent data for up to 1,000 keywords. For each keyword that you specify when setting a task, the API will return the keyword's search intent and intent probability. Besides the highest probable search intent, the results will also provide you with other likely search intent(s) and their probability.
 Based on keyword data and search results data, our system has been trained to detect four types of search intent: informational, navigational, commercial, transactional.`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Search Intent';
   }
 
   getParams(): z.ZodRawShape {
@@ -61,7 +65,7 @@ bs`),
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/search_intent/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/search_intent/live', 'POST', [{
         keywords: params.keywords,
         language_code: params.language_code
       }]);

@@ -1,23 +1,20 @@
 import express, { Request as ExpressRequest, Response, NextFunction } from 'express';
-import { randomUUID } from "node:crypto";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { z } from 'zod';
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import { DataForSEOClient, DataForSEOConfig } from '../core/client/dataforseo.client.js';
-import { EnabledModulesSchema, isModuleEnabled } from '../core/config/modules.config.js';
-import { BaseModule, ToolDefinition } from '../core/modules/base.module.js';
+import { buildBasicAuthHeader } from '../core/client/dataforseo.client.js';
 import { name, version } from '../core/utils/version.js';
-import { InMemoryEventStore } from '@modelcontextprotocol/sdk/examples/shared/inMemoryEventStore.js';
-import { ModuleLoaderService } from '../core/utils/module-loader.js';
 import { initializeFieldConfiguration } from '../core/config/field-configuration.js';
+import { initMcpServer } from './init-mcp-server.js';
+import { defaultGlobalToolConfig } from '../core/config/global.tool.js';
+import { getTokenExpiration } from '../core/utils/auth.js';
 
 // Initialize field configuration if provided
 initializeFieldConfiguration();
 console.error('Starting DataForSEO MCP Server...');
 console.error(`Server name: ${name}, version: ${version}`);
 
+
+const CLOCK_SKEW_MS = 10_000;
 /**
  * This example server demonstrates backwards compatibility with both:
  * 1. The deprecated HTTP+SSE transport (protocol version 2024-11-05)
@@ -35,8 +32,7 @@ const CLEANUP_INTERVAL = 60000; // 1 minute
 
 // Extended request interface to include auth properties
 interface Request extends ExpressRequest {
-  username?: string;
-  password?: string;
+  authHeader?: string;
 }
 
 // Transport interface with timestamp
@@ -67,78 +63,80 @@ function cleanupStaleConnections() {
 // Start periodic cleanup
 const cleanupInterval = setInterval(cleanupStaleConnections, CLEANUP_INTERVAL);
 
-function getServer(username: string | undefined, password: string | undefined): McpServer {
-  const server = new McpServer({
-    name,
-    version,
-  }, { capabilities: { logging: {} } });
 
-  // Initialize DataForSEO client
-  const dataForSEOConfig: DataForSEOConfig = {
-    username: username || "",
-    password: password || "",
-  };
-  
-  const dataForSEOClient = new DataForSEOClient(dataForSEOConfig);
-  console.error('DataForSEO client initialized');
-  
-  // Parse enabled modules from environment
-  const enabledModules = EnabledModulesSchema.parse(process.env.ENABLED_MODULES);
-  
-  // Initialize modules
-  const modules: BaseModule[] = ModuleLoaderService.loadModules(dataForSEOClient, enabledModules);
-  
-
-  // Register module tools
-  modules.forEach(module => {
-    const tools = module.getTools();
-    Object.entries(tools).forEach(([name, tool]) => {
-      const typedTool = tool as ToolDefinition;
-      const schema = z.object(typedTool.params);
-      server.tool(
-        name,
-        typedTool.description,
-        schema.shape,
-        typedTool.handler
-      );
-    });
-  });
-
-  return server;
-}
 
 // Create Express application
 const app = express();
+
+const trustProxy = process.env.TRUST_PROXY
+if (trustProxy == "true") {
+  // Behind a reverse proxy / ingress that terminates TLS: trust X-Forwarded-*
+  // so req.protocol reflects https and OAuth metadata URLs are correct.
+  if (defaultGlobalToolConfig.debug) {
+    console.log(`'trust proxy' enabled`)
+  }
+  app.set('trust proxy', true);
+}
 app.use(express.json());
 
-// Basic Auth Middleware
-const basicAuth = (req: Request, res: Response, next: NextFunction) => {
+// Auth middleware: passthrough Authorization header (Basic or Bearer) as-is,
+// or build a Basic header from env credentials as fallback.
+// Bearer tokens are issued by AUTH_SERVER_URL via OAuth (see /.well-known
+// endpoint below) and forwarded directly to DataForSEO without exchange.
+const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+
+  const resourceMetadataUrl = `${req.protocol}://${req.get('host')}/.well-known/oauth-protected-resource${req.path}`;
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
+
+    if (authHeader?.startsWith('Basic ')) {
+      req.authHeader = authHeader;
+    }
+    else if (authHeader?.startsWith('Bearer ')) {
+      const expirationDate = getTokenExpiration(authHeader);
+      if (expirationDate && expirationDate.getTime() + CLOCK_SKEW_MS <= Date.now()) {
+        if (defaultGlobalToolConfig.debug) {
+          console.log('bearer token expired, return 401')
+        }
+        res.setHeader(
+          'WWW-Authenticate',
+          `Bearer error="invalid_token", error_description="access token expired", resource_metadata="${resourceMetadataUrl}"`
+        );
+        res.status(401).json({
+          error: 'invalid_token',
+          error_description: 'expired bearer token'
+        });
+        return;
+      }
+
+      if (defaultGlobalToolConfig.debug) {
+        console.log('set bearer token')
+      }
+
+      req.authHeader = authHeader;
+    }
+    else if (process.env.DATAFORSEO_USERNAME && process.env.DATAFORSEO_PASSWORD) {
+      // Fall back to environment variables if no header credentials provided
+      req.authHeader = buildBasicAuthHeader(
+        process.env.DATAFORSEO_USERNAME,
+        process.env.DATAFORSEO_PASSWORD,
+      );
+    }
+
+    // Validate credentials
+    if (!req.authHeader) {
+      res.setHeader(
+        'WWW-Authenticate',
+        `Bearer error="invalid_token", error_description="token is null or empty", resource_metadata="${resourceMetadataUrl}"`
+      );
+
+      res.status(401).json({
+        error: "invalid auth",
+        error_description: "invalid auth"
+      });
+      return;
+    }
+
     next();
-    return;
-  }
-
-  const base64Credentials = authHeader.split(' ')[1];
-  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
-  const [username, password] = credentials.split(':');
-
-  if (!username || !password) {
-    console.error('Invalid credentials');
-    res.status(401).json({
-      jsonrpc: "2.0",
-      error: {
-        code: -32001,
-        message: "Invalid credentials"
-      },
-      id: null
-    });
-    return;
-  }
-
-  req.username = username;
-  req.password = password;
-  next();
 };
 
 //=============================================================================
@@ -151,30 +149,12 @@ const handleMcpRequest = async (req: Request, res: Response) => {
     // when multiple clients connect concurrently.
     
     try {
-      console.error(Date.now().toLocaleString())
-      
-    // Handle credentials
-      if (!req.username && !req.password) {
-        const envUsername = process.env.DATAFORSEO_USERNAME;
-        const envPassword = process.env.DATAFORSEO_PASSWORD;
-        if (!envUsername || !envPassword) {
-          console.error('No DataForSEO credentials provided');
-          res.status(401).json({
-            jsonrpc: "2.0",
-            error: {
-              code: -32001,
-              message: "Authentication required. Provide DataForSEO credentials."
-            },
-            id: null
-          });
-          return;
-        }
-        req.username = envUsername;
-        req.password = envPassword;
+      const initStart = performance.now();
+      const server = initMcpServer(req.authHeader!);
+
+      if (defaultGlobalToolConfig.debug) {
+        console.log(`MCP server initialized in ${(performance.now() - initStart).toFixed(1)}ms`)
       }
-      
-      const server = getServer(req.username, req.password); 
-      console.error(Date.now().toLocaleString())
 
       const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined
@@ -217,9 +197,43 @@ const handleNotAllowed = (method: string) => async (req: Request, res: Response)
     });
   };
 
-// Apply basic auth and shared handler to both endpoints
-app.post('/http', basicAuth, handleMcpRequest);
-app.post('/mcp', basicAuth, handleMcpRequest);
+// OAuth 2.0 Protected Resource discovery endpoint (RFC 9728).
+// MCP clients hit this on a 401 to find out which authorization server
+// issues Bearer tokens for this resource. Only exposed when the server
+// is not pre-configured with static credentials.
+if (!process.env.DATAFORSEO_USERNAME && !process.env.DATAFORSEO_PASSWORD) {
+  // RFC 9728 well-known is formed by inserting the metadata segment before
+  // the resource path, so an MCP endpoint at https://host/mcp is discovered
+  // at https://host/.well-known/oauth-protected-resource/mcp. Serve both the
+  // root and the path-scoped variants; the returned `resource` MUST be the
+  // canonical URI the client actually connects to (incl. the endpoint path).
+  const protectedResourceHandler = (resourcePath: string) => (req: Request, res: Response) => {
+    const base = `${req.protocol}://${req.get('host')}`;
+    const resource = resourcePath
+      ? `${base}/${resourcePath}`
+      : base;
+
+    const payload = {
+      resource,
+      authorization_servers: [defaultGlobalToolConfig.authServer],
+      bearer_methods_supported: ["header"],
+    };
+
+    if (defaultGlobalToolConfig.debug) {
+      console.log(`.well-known/oauth-protected-resource resp payload: ${JSON.stringify(payload)}`)
+    }
+    res.json(payload);
+  };
+
+  app.get('/.well-known/oauth-protected-resource', protectedResourceHandler(''));
+  app.get('/.well-known/oauth-protected-resource/mcp', protectedResourceHandler('mcp'));
+  app.get('/.well-known/oauth-protected-resource/http', protectedResourceHandler('http'));
+  app.get('/.well-known/oauth-protected-resource/sse', protectedResourceHandler('sse'));
+  app.get('/.well-known/oauth-protected-resource/messages', protectedResourceHandler('messages'));
+}
+
+app.post('/http', authMiddleware, handleMcpRequest);
+app.post('/mcp', authMiddleware, handleMcpRequest);
 
 app.get('/http', handleNotAllowed('GET HTTP'));
 app.get('/mcp', handleNotAllowed('GET MCP'));
@@ -231,28 +245,25 @@ app.delete('/mcp', handleNotAllowed('DELETE MCP'));
 // DEPRECATED HTTP+SSE TRANSPORT (PROTOCOL VERSION 2024-11-05)
 //=============================================================================
 
-app.get('/sse', basicAuth, async (req: Request, res: Response) => {
+app.get('/sse', authMiddleware, async (req: Request, res: Response) => {
   console.log('Received GET request to /sse (deprecated SSE transport)');
 
-  // Handle credentials
-  if (!req.username && !req.password) {
-    const envUsername = process.env.DATAFORSEO_USERNAME;
-    const envPassword = process.env.DATAFORSEO_PASSWORD;
-    
-    if (!envUsername || !envPassword) {
-      console.error('No DataForSEO credentials provided');
-      res.status(401).json({
-        jsonrpc: "2.0",
-        error: {
-          code: -32001,
-          message: "Authentication required. Provide DataForSEO credentials."
-        },
-        id: null
-      });
-      return;
-    }
-    req.username = envUsername;
-    req.password = envPassword;
+  if (!req.authHeader) {
+    console.error('No DataForSEO credentials provided');
+    const resourceMetadataUrl = `${req.protocol}://${req.get('host')}/.well-known/oauth-protected-resource${req.path}`;
+    res.setHeader(
+      'WWW-Authenticate',
+      `Bearer error="invalid_token", error_description="access token expired", resource_metadata="${resourceMetadataUrl}"`
+    );
+    res.status(401).json({
+      jsonrpc: "2.0",
+      error: {
+        code: -32001,
+        message: "Authentication required. Provide DataForSEO credentials."
+      },
+      id: null
+    });
+    return;
   }
 
   const transport = new SSEServerTransport('/messages', res);
@@ -281,31 +292,46 @@ app.get('/sse', basicAuth, async (req: Request, res: Response) => {
   // Set socket timeout
   req.socket.setTimeout(CONNECTION_TIMEOUT);
 
-  const server = getServer(req.username, req.password);
+  const server = initMcpServer(req.authHeader);
   await server.connect(transport);
 });
 
-app.post("/messages", basicAuth, async (req: Request, res: Response) => {
+app.post("/messages", authMiddleware, async (req: Request, res: Response) => {
   const sessionId = req.query.sessionId as string;
-  
-  // Handle credentials
-  if (!req.username && !req.password) {
-    const envUsername = process.env.DATAFORSEO_USERNAME;
-    const envPassword = process.env.DATAFORSEO_PASSWORD;
-    
-    if (!envUsername || !envPassword) {
-      res.status(401).json({
-        jsonrpc: "2.0",
-        error: {
-          code: -32001,
-          message: "Authentication required. Provide DataForSEO credentials."
-        },
-        id: null
-      });
-      return;
-    }
-    req.username = envUsername;
-    req.password = envPassword;
+  const resourceMetadataUrl = `${req.protocol}://${req.get('host')}/.well-known/oauth-protected-resource${req.path}`;
+
+  if (!req.authHeader) {
+    res.setHeader(
+      'WWW-Authenticate',
+      `Bearer error="invalid_token", error_description="access token expired", resource_metadata="${resourceMetadataUrl}"`
+    );
+    res.status(401).json({
+      jsonrpc: "2.0",
+      error: {
+        code: -32001,
+        message: "Authentication required"
+      },
+      id: null
+    });
+    return;
+  }
+
+  if (req.authHeader?.startsWith('Bearer ')) {
+      const expirationDate = getTokenExpiration(req.authHeader);
+      if (expirationDate && expirationDate.getTime() + CLOCK_SKEW_MS <= Date.now()) {
+        if (defaultGlobalToolConfig.debug) {
+          console.log('bearer token expired, return 401')
+        }
+        res.setHeader(
+          'WWW-Authenticate',
+          `Bearer error="invalid_token", error_description="access token expired", resource_metadata="${resourceMetadataUrl}"`
+        );
+        res.status(401).json({
+          error: 'invalid_token',
+          error_description: 'expired bearer token'
+        });
+        return;
+      }
   }
 
   const transportData = transports[sessionId];

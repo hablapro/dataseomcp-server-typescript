@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../../base.tool.js';
 
 export class GoogleRankedKeywordsTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleRankedKeywordsTool extends BaseTool {
 
   getDescription(): string {
     return "This endpoint will provide you with the list of keywords that any domain or webpage is ranking for. You will also get SERP elements related to the keyword position, as well as impressions, monthly searches and other data relevant to the returned keywords.";
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Ranked Keywords';
   }
 
   getParams(): z.ZodRawShape {
@@ -70,13 +74,15 @@ example:
       ),
       include_subdomains: z.boolean().optional().describe("Include keywords from subdomains"),
       include_clickstream_data: z.boolean().optional().default(false).describe(
-        `Include or exclude data from clickstream-based metrics in the result`)
+        `Include or exclude data from clickstream-based metrics in the result`),
+      item_types: z.array(z.enum(['organic', 'paid','featured_snippet','local_pack', 'ai_overview_reference'])).optional().describe(`display results by item type
+indicates the type of search results included in the response`).default(['organic']),
     };
   }
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/ranked_keywords/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/ranked_keywords/live', 'POST', [{
         target: params.target,
         location_name: params.location_name,
         language_code: params.language_code,
@@ -85,7 +91,8 @@ example:
         filters: this.formatFilters(params.filters),
         order_by: this.formatOrderBy(params.order_by),
         include_subdomains: params.include_subdomains,
-        include_clickstream_data: params.include_clickstream_data
+        include_clickstream_data: params.include_clickstream_data,
+        item_types: params.item_types
       }]);
       return this.validateAndFormatResponse(response);
     } catch (error) {

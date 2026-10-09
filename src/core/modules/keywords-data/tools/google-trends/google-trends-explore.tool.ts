@@ -8,11 +8,15 @@ export class GoogleTrendsExploreTool extends BaseTool {
   }
 
   getName(): string {
-    return 'keywords_data_google_trends_explore';
+    return 'kw_data_google_trends_explore';
   }
 
   getDescription(): string {
     return 'This endpoint will provide you with the keyword popularity data from the ‘Explore’ feature of Google Trends. You can check keyword trends for Google Search, Google News, Google Images, Google Shopping, and YouTube';
+  }
+
+  getTitle(): string {
+    return 'Keywords Data Google Trends Explore';
   }
 
   getParams(): z.ZodRawShape {

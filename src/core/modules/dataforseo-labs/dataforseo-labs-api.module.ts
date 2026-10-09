@@ -1,5 +1,6 @@
 import { DataForSEOClient } from '../../client/dataforseo.client.js';
-import { BaseModule, ToolDefinition } from '../base.module.js';
+import { BaseModule, buildToolsRecord, ToolDefinition } from '../base.module.js';
+import { PromptDefinition } from '../prompt-definition.js';
 import { GoogleDomainCompetitorsTool } from './tools/google/competitor-research/google-domain-competitors.tool.js';
 import { GoogleDomainRankOverviewTool } from './tools/google/competitor-research/google-domain-rank-overview.tool.js';
 import { GoogleKeywordsIdeasTool } from './tools/google/keyword-research/google-keywords-ideas.tool.js';
@@ -12,7 +13,7 @@ import { GoogleKeywordOverviewTool } from './tools/google/keyword-research/googl
 import { GoogleKeywordsForSiteTool } from './tools/google/keyword-research/google-keywords-for-site.tool.js';
 import { GoogleSubdomainsTool } from './tools/google/competitor-research/google-subdomains.js';
 import { GoogleSERPCompetitorsTool } from './tools/google/competitor-research/google-serp-competitors.tool.js';
-import { GoogleHistoricalSERP } from './tools/google/competitor-research/google-historical-serp.js';
+import { GoogleHistoricalSERP } from './tools/google/competitor-research/google-historical-serps.js';
 import { GoogleSearchIntentTool } from './tools/google/keyword-research/google-search-intent.tool.js';
 import { GoogleDomainIntersectionsTool } from './tools/google/competitor-research/google-domain-intersection.tool.js';
 import { GoogleHistoricalDomainRankOverviewTool } from './tools/google/competitor-research/google-historical-domain-rank-overview.tool.js';
@@ -20,6 +21,14 @@ import { GooglePageIntersectionsTool } from './tools/google/competitor-research/
 import { DataForSeoLabsFilterTool } from './tools/labs-filters.tool.js';
 import { GoogleBulkTrafficEstimationTool } from './tools/google/competitor-research/google-bulk-traffic-estimation.tool.js';
 import { GoogleHistoricalKeywordDataTool } from './tools/google/keyword-research/google-historical-keyword-data.tool.js';
+import { GoogleRelevantPagesTool } from './tools/google/competitor-research/google-relevant-pages.js';
+import { AmazonProductKeywordIntersectionsTool } from './tools/amazon/product-keyword-intersections.tool.js';
+import { AmazonProductCompetitorsTool } from './tools/amazon/product-competitors.tool.js';
+import { AmazonRankedKeywordsTool } from './tools/amazon/ranked-keywords.tool.js';
+import { AmazonBulkSearchVolumeTool } from './tools/amazon/bulk-search-volume.tool.js';
+import { AmazonRelatedKeywordsTool } from './tools/amazon/related-keywords.tool.js';
+import { AmazonProductRankOverviewTool } from './tools/amazon/product-rank-overview.tool.js';
+import { datalabsPrompts } from './dataforseo-labs.prompts.js';
 
 export class DataForSEOLabsApi extends BaseModule {
   constructor(client: DataForSEOClient) {
@@ -48,16 +57,30 @@ export class DataForSEOLabsApi extends BaseModule {
       new GoogleBulkTrafficEstimationTool(this.dataForSEOClient),
       new DataForSeoLabsFilterTool(this.dataForSEOClient),
       new GoogleHistoricalKeywordDataTool(this.dataForSEOClient),
+      new GoogleRelevantPagesTool(this.dataForSEOClient),
+      new AmazonProductKeywordIntersectionsTool(this.dataForSEOClient),
+      new AmazonProductCompetitorsTool(this.dataForSEOClient),
+      new AmazonRankedKeywordsTool(this.dataForSEOClient),
+      new AmazonBulkSearchVolumeTool(this.dataForSEOClient),
+      new AmazonRelatedKeywordsTool(this.dataForSEOClient),
+      new AmazonProductRankOverviewTool(this.dataForSEOClient),
       // Add more tools here
     ];
 
-    return tools.reduce((acc, tool) => ({
-      ...acc,
-      [tool.getName()]: {
-        description: tool.getDescription(),
-        params: tool.getParams(),
-        handler: (params: any) => tool.handle(params),
-      },
-    }), {});
+    return buildToolsRecord(tools);
   }
+
+    getPrompts(): Record<string, PromptDefinition> {
+      return datalabsPrompts.reduce((acc, prompt) => ({
+        ...acc,
+        [prompt.name]: {
+          description: prompt.description,
+          params: prompt.params,
+          handler: (params: any) => {
+
+            return prompt.handler(params);
+          },
+        },
+      }), {});
+    }
 } 

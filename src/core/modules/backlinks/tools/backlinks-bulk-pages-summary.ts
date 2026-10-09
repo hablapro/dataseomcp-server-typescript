@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../client/dataforseo.client.js';
 import { BaseTool } from '../../base.tool.js';
 
 export class BacklinksBulkPagesSummaryTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class BacklinksBulkPagesSummaryTool extends BaseTool {
 
   getDescription(): string {
     return "This endpoint will provide you with a comprehensive overview of backlinks and related data for a bulk of up to 1000 pages, domains, or subdomains. If you indicate a single page as a target, you will get comprehensive summary data on all backlinks for that page.";
+  }
+
+  getTitle(): string {
+    return 'Backlinks Bulk Pages Summary';
   }
 
   getParams(): z.ZodRawShape {
@@ -31,7 +35,7 @@ if set to false, indirect links will be ignored`).default(true)
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/backlinks/bulk_pages_summary/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/bulk_pages_summary/live', 'POST', [{
         targets: params.targets,
         include_subdomains: params.include_subdomains,
       }]);

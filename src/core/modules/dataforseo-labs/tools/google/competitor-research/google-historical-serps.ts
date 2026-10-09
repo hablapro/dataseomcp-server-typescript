@@ -2,18 +2,23 @@ import { z } from 'zod';
 import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool, DataForSEOFullResponse, DataForSEOResponse } from '../../../../base.tool.js';
 import { defaultGlobalToolConfig } from '../../../../../config/global.tool.js';
+import { date } from 'zod/v4';
 
 export class GoogleHistoricalSERP extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
   getName(): string {
-    return 'dataforseo_labs_google_historical_serp';
+    return 'dataforseo_labs_google_historical_serps';
   }
 
   getDescription(): string {
     return `This endpoint will provide you with Google SERPs collected within the specified time frame. You will also receive a complete overview of featured snippets and other extra elements that were present within the specified dates. The data will allow you to analyze the dynamics of keyword rankings over time for the specified keyword and location.`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Historical SERPs';
   }
 
   getParams(): z.ZodRawShape {
@@ -28,16 +33,20 @@ example:
         `language code
         required field
         example:
-        en`)
+        en`),
+      date_from: z.string().optional().describe(`starting date of the time range, date format: YYYY-MM-DD`),
+      date_to: z.string().optional().describe(`ending date of the time range, date format: YYYY-MM-DD`)
     };
   }
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/historical_serps/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/historical_serps/live', 'POST', [{
         keyword: params.keyword,
         location_name: params.location_name,
-        language_code: params.language_code
+        language_code: params.language_code,
+        date_from: params.date_from,
+        date_to: params.date_to
       }]);
 
       console.error(JSON.stringify(response));

@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool, DataForSEOResponse } from '../../../../base.tool.js';
 
 export class GoogleHistoricalDomainRankOverviewTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleHistoricalDomainRankOverviewTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint will provide you with historical data on rankings and traffic of the specified domain, such as domain ranking distribution in SERPs and estimated monthly traffic volume for both organic and paid results`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Historical Rank Overview';
   }
 
   getParams(): z.ZodRawShape {
@@ -37,7 +41,7 @@ example:
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/historical_rank_overview/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/historical_rank_overview/live', 'POST', [{
         target: params.target,
         location_name: params.location_name,
         language_code: params.language_code,

@@ -30,7 +30,7 @@ export class DataForSeoLabsFilterTool extends BaseTool {
     'dataforseo_labs_google_subdomains': 'subdomains.google',
     'dataforseo_labs_google_domain_intersection': 'domain_intersection.google',
     'dataforseo_labs_google_page_intersection': 'page_intersection.google',
-    'dataforseo_labs_google_historical_serp': 'historical_serp.google',
+    'dataforseo_labs_google_historical_serps': 'historical_serp.google',
     'dataforseo_labs_google_historical_rank_overview': 'domain_rank_overview.google',
     'dataforseo_labs_google_relevant_pages': 'relevant_pages.google',
     'dataforseo_labs_google_top_searches': 'top_searches.google',
@@ -45,7 +45,7 @@ export class DataForSeoLabsFilterTool extends BaseTool {
     'dataforseo_labs_google_categories_for_domain': 'categories_for_domain.google',
     'dataforseo_labs_google_keywords_for_categories': 'keywords_for_categories.google',
     'dataforseo_labs_amazon_product_competitors': 'product_competitors.amazon',
-    'dataforseo_labs_amazon_product_keyword_intersections': 'product_keyword_intersections.amazon',
+    'dataforseo_labs_amazon_product_kw_intersections': 'product_keyword_intersections.amazon',
     'dataforseo_labs_google_app_competitors': 'app_competitors.google',
     'dataforseo_labs_apple_app_competitors': 'app_competitors.apple',
     'dataforseo_labs_google_app_intersection': 'app_intersection.google',
@@ -55,12 +55,16 @@ export class DataForSeoLabsFilterTool extends BaseTool {
     'dataforseo_labs_database_rows_count': 'database_rows_count'
   };
 
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
   getName(): string {
     return 'dataforseo_labs_available_filters';
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Available Filters';
   }
 
   getDescription(): string {
@@ -89,7 +93,7 @@ Please, keep in mind that filters are associated with a certain object in the re
     }
 
     // Fetch fresh data
-    const response = await this.client.makeRequest('/v3/dataforseo_labs/available_filters', 'GET', null, true) as DataForSEOFullResponse;
+    const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/available_filters', 'GET', null, true) as DataForSEOFullResponse;
     this.validateResponseFull(response);
 
     // Transform the response into our cache format

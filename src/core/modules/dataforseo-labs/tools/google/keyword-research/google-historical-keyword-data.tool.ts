@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool, DataForSEOResponse } from '../../../../base.tool.js';
 
 export class GoogleHistoricalKeywordDataTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleHistoricalKeywordDataTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint provides Google historical keyword data for specified keywords, including search volume, cost-per-click, competition values for paid search, monthly searches, and search volume trends. You can get historical keyword data since August, 2021, depending on keywords along with location and language combination`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Historical Keyword Data';
   }
 
   getParams(): z.ZodRawShape {
@@ -40,7 +44,7 @@ example:
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/historical_keyword_data/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/historical_keyword_data/live', 'POST', [{
         keywords: params.keywords,
         location_name: params.location_name,
         language_code: params.language_code

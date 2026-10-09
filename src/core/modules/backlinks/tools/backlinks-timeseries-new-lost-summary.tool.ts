@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../client/dataforseo.client.js';
 import { BaseTool } from '../../base.tool.js';
 
 export class BacklinksTimeseriesNewLostSummaryTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -17,6 +17,10 @@ The results will be provided for a period between the two indicated dates, and m
 Data from this endpoint will be especially helpful for building time-series graphs of new and lost backlinks and referring domains.
 
 `;
+  }
+
+  getTitle(): string {
+    return 'Backlinks Timeseries New Lost Summary';
   }
 
   getParams(): z.ZodRawShape {
@@ -61,7 +65,7 @@ if there is no data for a certain day/week/month/year, we will return 0`).defaul
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/backlinks/timeseries_new_lost_summary/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/timeseries_new_lost_summary/live', 'POST', [{
         target: params.target,
         date_from: params.date_from,
         date_to: params.date_to,

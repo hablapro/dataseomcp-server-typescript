@@ -24,12 +24,16 @@ export class BusinessListingsFiltersTool extends BaseTool {
     'business_data_business_listings_categories_aggregation': 'categories_aggregation'
   };
 
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
   getName(): string {
     return 'business_data_business_listings_filters';
+  }
+
+  getTitle(): string {
+    return 'Business Data Business Listings Filters';
   }
 
   getDescription(): string {
@@ -58,7 +62,7 @@ Please, keep in mind that filters are associated with a certain object in the re
     }
 
     // Fetch fresh data
-    const response = await this.client.makeRequest('/v3/business_data/business_listings/available_filters', 'GET', null, true) as DataForSEOFullResponse;
+    const response = await this.dataForSEOClient.makeRequest('/v3/business_data/business_listings/available_filters', 'GET', null, true) as DataForSEOFullResponse;
     this.validateResponseFull(response);
 
     // Transform the response into our cache format

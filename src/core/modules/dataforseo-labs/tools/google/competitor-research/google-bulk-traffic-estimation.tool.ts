@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../../base.tool.js';
 
 export class GoogleBulkTrafficEstimationTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleBulkTrafficEstimationTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint will provide you with estimated monthly traffic volumes for up to 1,000 domains, subdomains, or webpages. Along with organic search traffic estimations, you will also get separate values for paid search, featured snippet, and local pack results.`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Bulk Traffic Estimation';
   }
 
   getParams(): z.ZodRawShape {
@@ -34,17 +38,18 @@ example:
         en`),
       ignore_synonyms: z.boolean().default(true).describe(
   `ignore highly similar keywords, if set to true, results will be more accurate`),
-
+      item_types: z.array(z.enum(['organic', 'paid','featured_snippet','local_pack'])).optional().describe(`display results by item type
+indicates the type of search results included in the response`).default(['organic'])
     };
   }
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/bulk_traffic_estimation/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/bulk_traffic_estimation/live', 'POST', [{
         targets: params.targets,
         location_name: params.location_name,
         language_code: params.language_code,
-        item_types: ['organic'],
+        item_types: params.item_types,
         ignore_synonyms: params.ignore_synonyms
       }]);
       return this.validateAndFormatResponse(response);

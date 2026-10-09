@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../client/dataforseo.client.js';
 import { BaseTool } from '../../base.tool.js';
 
 export class BacklinksBulkRanksTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class BacklinksBulkRanksTool extends BaseTool {
 
   getDescription(): string {
     return "This endpoint will provide you with rank scores of the domains, subdomains, and pages specified in the targets array. The score is based on the number of referring domains pointing to the specified domains, subdomains, or pages. The rank values represent real-time data for the date of the request and range from 0 (no backlinks detected) to 1,000 (highest rank). A similar scoring system is used in Google’s Page Rank algorithm";
+  }
+
+  getTitle(): string {
+    return 'Backlinks Bulk Ranks';
   }
 
   getParams(): z.ZodRawShape {
@@ -46,7 +50,7 @@ one_thousand — rank values are displayed on a 0–1000 scale`).default('one_th
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/backlinks/bulk_ranks/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/backlinks/bulk_ranks/live', 'POST', [{
         targets: params.targets,
         rank_scale: params.rank_scale        
       }]);

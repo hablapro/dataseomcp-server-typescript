@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { DataForSEOClient } from '../client/dataforseo.client.js';
 import { defaultGlobalToolConfig } from '../config/global.tool.js';
+import { DEFAULT_DATAFORSEO_TOOL_ANNOTATIONS } from '../config/tool-annotations.js';
 import { filterFields, parseFieldPaths } from '../utils/field-filter.js';
 import { FieldConfigurationManager } from '../config/field-configuration.js';
 
@@ -48,6 +50,11 @@ export abstract class BaseTool {
   }
 
   protected getFilterExpression(): z.ZodType<any> {
+    if( defaultGlobalToolConfig.simpleFilter ) {
+      // Permissive filter schema for LLM tool compatibility (e.g., OpenAI/ChatGPT).
+      // If you modify this behavior, re-verify compatibility with OpenAI tools.
+      return z.array(z.any());
+    }
     const filterExpression = 
     z.array(
         z.union([
@@ -61,23 +68,25 @@ export abstract class BaseTool {
     return filterExpression;
   }
 
-  protected validateAndFormatResponse(response: any): { content: Array<{ type: string; text: string }> } {
-    console.error(JSON.stringify(response));
+  protected validateAndFormatResponse(response: any, fullData: boolean = false): { content: Array<{ type: string; text: string }> } {
+    if (defaultGlobalToolConfig.debug) {
+      console.error(JSON.stringify(response));
+    }
     if (defaultGlobalToolConfig.fullResponse || this.supportOnlyFullResponse()) {
       let data = response as DataForSEOFullResponse;
       this.validateResponseFull(data);
       let result = data.tasks[0].result;
-      return this.formatResponse(result);
+      return this.formatResponse(result, fullData);
     }
     this.validateResponse(response);
-    return this.formatResponse(response);
+    return this.formatResponse(response, fullData);
   }
 
-  protected formatResponse(data: any): { content: Array<{ type: string; text: string }> } {
+  protected formatResponse(data: any, fullData: boolean = false): { content: Array<{ type: string; text: string }> } {
     const fieldConfig = FieldConfigurationManager.getInstance();
     if (fieldConfig.hasConfiguration()) {
       const toolName = this.getName();
-      if (fieldConfig.isToolConfigured(toolName)) {
+      if (fieldConfig.isToolConfigured(toolName) && !fullData) {
         const fields = fieldConfig.getFieldsForTool(toolName);
         if (fields && fields.length > 0) {
           data = filterFields(data, parseFieldPaths(fields));
@@ -106,13 +115,13 @@ export abstract class BaseTool {
   }
 
   protected validateResponse(response: DataForSEOResponse): void {
-    if (response.status_code / 100 !== 200) {
+    if (Math.floor(response.status_code / 100) !== 200) {
       throw new Error(`API Error: ${response.status_message} (Code: ${response.status_code})`);
     }
   }
 
   protected validateResponseFull(response: DataForSEOFullResponse): void {
-    if (response.status_code / 100 !== 200) {
+    if (Math.floor(response.status_code / 100) !== 200) {
       throw new Error(`API Error: ${response.status_message} (Code: ${response.status_code})`);
     }
 
@@ -121,7 +130,7 @@ export abstract class BaseTool {
     }
 
     const task = response.tasks[0];
-    if (task.status_code / 100 !== 200) {
+    if (Math.floor(task.status_code / 100) !== 200) {
       throw new Error(`Task Error: ${task.status_message} (Code: ${task.status_code})`);
     }
 
@@ -131,9 +140,14 @@ export abstract class BaseTool {
   }
 
   abstract getName(): string;
+  abstract getTitle(): string;
   abstract getDescription(): string;
   abstract getParams(): z.ZodRawShape;
   abstract handle(params: any): Promise<any>;
+
+  getAnnotations(): ToolAnnotations {
+    return DEFAULT_DATAFORSEO_TOOL_ANNOTATIONS;
+  }
 
   protected filterResponseFields(response: any, fields: string[]): any {
     if (!fields || fields.length === 0) {

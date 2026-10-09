@@ -3,7 +3,7 @@ import { DataForSEOClient } from '../../../../../client/dataforseo.client.js';
 import { BaseTool } from '../../../../base.tool.js';
 
 export class GoogleDomainCompetitorsTool extends BaseTool {
-  constructor(private client: DataForSEOClient) {
+  constructor(client: DataForSEOClient) {
     super(client);
   }
 
@@ -13,6 +13,10 @@ export class GoogleDomainCompetitorsTool extends BaseTool {
 
   getDescription(): string {
     return `This endpoint will provide you with a full overview of ranking and traffic data of the competitor domains from organic and paid search. In addition to that, you will get the metrics specific to the keywords both competitor domains and your domain rank for within the same SERP.`;
+  }
+
+  getTitle(): string {
+    return 'DataForSEO Labs Google Competitors Domain';
   }
 
   getParams(): z.ZodRawShape {
@@ -38,19 +42,13 @@ example:
         if you specify the 10 value, the first ten keywords in the results array will be omitted and the data will be provided for the successive keywords`
       ),
       filters: this.getFilterExpression().optional().describe(
-        `you can add several filters at once (8 filters maximum)
-        you should set a logical operator and, or between the conditions
-        the following operators are supported:
-        regex, not_regex, <, <=, >, >=, =, <>, in, not_in, match, not_match, ilike, not_ilike, like, not_like
-        you can use the % operator with like and not_like, as well as ilike and not_ilike to match any string of zero or more characters
-        merge operator must be a string and connect two other arrays, availible values: or, and.
-        example:
-        ["metrics.organic.count",">",50]
-        [["metrics.organic.pos_1","<>",0],"and",["metrics.organic.impressions_etv",">=","10"]]
-
-        [[["metrics.organic.count",">=",50],"and",["metrics.organic.pos_1","in",[1,5]]],
-        "or",
-        ["metrics.organic.etv",">=","100"]]`
+        `Array-based filter expression. A single condition is a 3-element array: [field, operator, value]. Combine conditions with ["and"|"or"] between them: [condition, "and", condition]. Max 8 filters.
+Operators: regex, not_regex, <, <=, >, >=, =, <>, in, not_in, match, not_match, ilike, not_ilike, like, not_like
+Use % with like/not_like/ilike/not_ilike as a wildcard.
+Examples:
+  Single: ["metrics.organic.count", ">", 50]
+  Combined: [["metrics.organic.pos_1", "<>", 0], "and", ["metrics.organic.impressions_etv", ">=", "10"]]
+  Nested: [[["metrics.organic.count", ">=", 50], "and", ["metrics.organic.pos_1", "in", [1, 5]]], "or", ["metrics.organic.etv", ">=", "100"]]`
           ),
       order_by: z.array(z.string()).optional().describe(
         `results sorting rules
@@ -70,14 +68,15 @@ example:
         default value: false
         set to true if you want to get highly-relevant competitors excluding the top websites`),
       include_clickstream_data: z.boolean().optional().default(false).describe(
-        `Include or exclude data from clickstream-based metrics in the result`)
-
+        `Include or exclude data from clickstream-based metrics in the result`),
+      item_types: z.array(z.enum(['organic', 'paid','featured_snippet','local_pack'])).optional().describe(`display results by item type
+indicates the type of search results included in the response`).default(['organic'])
     };
   }
 
   async handle(params: any): Promise<any> {
     try {
-      const response = await this.client.makeRequest('/v3/dataforseo_labs/google/competitors_domain/live', 'POST', [{
+      const response = await this.dataForSEOClient.makeRequest('/v3/dataforseo_labs/google/competitors_domain/live', 'POST', [{
         target: params.target,
         location_name: params.location_name,
         language_code: params.language_code,
@@ -85,7 +84,7 @@ example:
         filters: this.formatFilters(params.filters),
         order_by: this.formatOrderBy(params.order_by),
         exclude_top_domains: params.exclude_top_domains,
-        item_types: ['organic'],
+        item_types: params.item_types,
         include_clickstream_data: params.include_clickstream_data
       }]);
       return this.validateAndFormatResponse(response);
