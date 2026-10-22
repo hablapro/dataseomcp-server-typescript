@@ -7,7 +7,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "minify": true,
   "secrets": {
-    "required": ["DATAFORSEO_USERNAME", "DATAFORSEO_PASSWORD"]
+    "required": ["DATAFORSEO_USERNAME", "DATAFORSEO_PASSWORD", "MCP_API_KEY"]
   },
   "vars": {
     "ENABLED_MODULES": null,

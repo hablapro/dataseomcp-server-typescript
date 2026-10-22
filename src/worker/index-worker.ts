@@ -334,6 +334,14 @@ function createLandingPage(baseUrl: string): Response {
   });
 }
 
+function hasValidKey(request: Request, env: Env): boolean {
+  const expected = (env as any).MCP_API_KEY as string | undefined;
+  if (!expected) return false;
+  const got = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+  const a = new TextEncoder().encode(got), b = new TextEncoder().encode(expected);
+  return a.byteLength === b.byteLength && (crypto.subtle as any).timingSafeEqual(a, b);
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -357,6 +365,10 @@ export default {
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+    // Bearer gate on every MCP route (Railway breach follow-up, 2026-10-22). Fails closed if MCP_API_KEY is unset.
+    if (['/mcp', '/http', '/sse', '/messages', '/sse/message'].includes(url.pathname) && !hasValidKey(request, env)) {
+      return new Response('Unauthorized', { status: 401 });
     }
     // Check if credentials are configured
     if (!env.DATAFORSEO_USERNAME || !env.DATAFORSEO_PASSWORD) {
